@@ -40,6 +40,7 @@ accomodation in uk">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     
     
+    
     <script type="application/ld+json">{
 		"@context": "http://schema.org",
 		"@type": "Organization",
@@ -198,16 +199,25 @@ accomodation in uk">
         </div>
       </div>
     </section>
-      
+    <div class="container mt-8" id="buttonContainer">
+      <div class="pagination-button-container">
+        <button id="previousButton" class="pagination-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+          Previous
+        </button>
+        <button id="nextButton" class="pagination-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+          Next
+        </button>
+      </div>
+
     <div id="jobListings">
       <div class="u-repeater u-repeater-1">
         <div class="u-container-style u-grey-5 u-list-item u-radius-49 u-repeater-item u-shape-round u-list-item-1">
           <div class="u-container-layout u-similar-container u-container-layout-1"></div>
+          
         </div>
       </div>
     </div>
-    
-    
+  
     <footer class="u-clearfix u-footer u-grey-80" id="sec-f4d2"><div class="u-clearfix u-sheet u-sheet-1">
         <div class="u-clearfix u-expanded-width-lg u-expanded-width-md u-expanded-width-sm u-expanded-width-xl u-gutter-30 u-layout-wrap u-layout-wrap-1">
           <div class="u-gutter-0 u-layout">
@@ -272,7 +282,19 @@ accomodation in uk">
           </div>
         </div>
       </div>
-    <style> .u-cookies-consent {
+    <style>
+       #buttonContainer {
+    position: relative;
+  }
+
+  .pagination-button-container {
+    position: absolute;
+    margin-bottom: 700px;
+    top: -30%;
+    left: 50%;
+    transform: translate(-70%, -50%);
+  }
+    .u-cookies-consent {
   background-image: none;
 }
 
@@ -399,14 +421,23 @@ accomodation in uk">
   // Existing APP_ID and APP_KEY
   const APP_ID = 'fa6d8cf2'; // Replace with your Adzuna Application ID
   const APP_KEY = '155bbd1224c4a6363b19231d9c4a12f6'; // Replace with your Adzuna Application Key
-
+  let currentPage = 1;
+  let results = 20;
+  let lastFetchTime = null;
+  
+  
+  function clearJobListings() {
+  const jobListingsElement = document.getElementById('jobListings');
+  jobListingsElement.innerHTML = '';
+}
   // Function to fetch jobs from Adzuna API and display them on the webpage
           // Function to fetch and display jobs from Adzuna API (XML data)
           async function fetchJobs(searchTerm) {
+            clearJobListings();
         const jobListingsElement = document.getElementById('jobListings');
 
         try {
-            let adzunaApiUrl = `https://api.adzuna.com/v1/api/jobs/gb/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&results_per_page=25`;
+          let adzunaApiUrl = `https://api.adzuna.com/v1/api/jobs/gb/search/${currentPage}?app_id=${APP_ID}&app_key=${APP_KEY}&results_per_page=${results}`;
 
             // Add filters based on the input parameter
       
@@ -421,12 +452,38 @@ accomodation in uk">
 
             console.log('Fetched XML data:', xmlData); // Log the fetched XML data to check if it's received
 
-            // Clear existing job listings
-            jobListingsElement.innerHTML = '';
+            if (currentPage === 1) {
+        jobListingsElement.innerHTML = '';
+      }
             const jobResults = xmlData.results;
             console.log(jobResults + "jobresult")
-
+            lastFetchTime = new Date();
             for (const job of jobResults) {
+        // Check if the company name is to be excluded
+        if (job.company.display_name === 'HAYS' || job.company.display_name === 'Reed' || job.company.display_name === 'Totaljobs') {
+          continue; // Skip this job and move to the next one
+        }
+          // Time
+  const createdAt = new Date(job.created);
+const time = document.createElement('p');
+time.classList.add('text-indigo-900', 'text-sm');
+
+// Calculate the time difference in milliseconds
+const timeDifference = new Date() - createdAt;
+const millisecondsInDay = 1000 * 60 * 60 * 24;
+const daysAgo = Math.floor(timeDifference / millisecondsInDay);
+// Format the time message based on the time difference
+let timeMessage = '';
+if (daysAgo === 0) {
+timeMessage = 'Posted today';
+} else if (daysAgo === 1) {
+timeMessage = 'Posted 1 day ago';
+} else {
+timeMessage = `Posted ${daysAgo} days ago`;
+}
+if (daysAgo <= 15) {
+
+ 
   // Create job listing container
   const jobListing = document.createElement('div');
   jobListing.classList.add('job-listing', 'grey', 'bg-opacity-80', 'rounded-lg', 'p-4', 'shadow');
@@ -478,25 +535,8 @@ const contactTime = document.createElement('p');
 //   contactType.classList.add('text-indigo-900', 'text-sm');
 //   contactType.textContent =  job.contract_type;
 
-  // Time
-  const createdAt = new Date(job.created);
-const time = document.createElement('p');
-time.classList.add('text-indigo-900', 'text-sm');
 
-// Calculate the time difference in milliseconds
-const timeDifference = new Date() - createdAt;
-const millisecondsInDay = 1000 * 60 * 60 * 24;
-const daysAgo = Math.floor(timeDifference / millisecondsInDay);
 
-// Format the time message based on the time difference
-let timeMessage = '';
-if (daysAgo === 0) {
-timeMessage = 'Posted today';
-} else if (daysAgo === 1) {
-timeMessage = 'Posted 1 day ago';
-} else {
-timeMessage = `Posted ${daysAgo} days ago`;
-}
 
 time.textContent = timeMessage;
 
@@ -517,30 +557,47 @@ time.textContent = timeMessage;
   jobListing.appendChild(jobDescription);
   jobListing.appendChild(time);
   jobListing.appendChild(applyButton);
+  
 
   // Append the job listing container to the job listings element
-  jobListingsElement.appendChild(jobListing);
+  jobListingsElement.prepend(jobListing);
+}
 }
 } catch (error) {
 console.error('Error fetching jobs:', error);
 }
 }
 
+ // Open link in a new tab
   // Modify the searchJobs function to fetch results based on search term
   function searchJobs() {
     const searchInput = document.getElementById('searchInput').value;
-
-    // Assuming you want to show part-time jobs initially
+    currentPage = 1; // Reset the current page to 1
     fetchJobs(searchInput); // Pass the search term to the fetchJobs function
   }
+  document.getElementById('previousButton').addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--; // Decrement the current page if not on the first page
+    const searchInput = document.getElementById('searchInput').value;
+    fetchJobs(searchInput); // Fetch the previous page of job listings based on the search term
+  }
+});
 
-  // Call the initial searchJobs function with the desired filter when the page loads
-  window.addEventListener('load', () => {
-    // Assuming you want to show part-time jobs initially
-    fetchJobs('Part-time');
-    // Start refreshing jobs after the initial load
- 
-  });
+// Add event listener for the "Next" button to fetch the next page of job listings
+document.getElementById('nextButton').addEventListener('click', () => {
+  currentPage++; // Increment the current page
+  const searchInput = document.getElementById('searchInput').value;
+  fetchJobs(searchInput); // Fetch the next page of job listings based on the search term
+});
+
+// Call the initial searchJobs function with the desired filter when the page loads
+window.addEventListener('load', () => {
+  fetchJobs('Part-time');
+  setInterval(() => {
+    const searchInput = document.getElementById('searchInput').value;
+    fetchJobs(searchInput);
+  }, 10 * 60 * 60 * 1000); // 10 hours in milliseconds
+});
 </script>
   
 </body></html>
